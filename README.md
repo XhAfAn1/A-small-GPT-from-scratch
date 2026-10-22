@@ -71,3 +71,20 @@ Computers cannot understand words or letters directly. The tokenizer is the tran
    First splits text around the special `<|endoftext|>` token, splits normal text into words using the regex pattern, calls the `_bpe` function on each word, and returns the full list of token IDs.
 4. **The Decoder (`decode`):**
    Takes the integer IDs, looks up their raw byte pieces in the reverse dictionary, glues them together, and reconstructs the original English text.
+
+---
+
+### 2. Embedding Layer (Token & Position Embeddings)
+
+#### What it does:
+So embedding is basically simply creating a higher dimensional tensor and assigning them to each token. so it means we have 50k tokens in vocabulary and each token has now single value (an integer ID). but instead of that single value now we give so many values (in our case 384 values) for each token. because a single number cannot describe the meaning of a word to a computer and larger numbers don't mean "greater" words. initially it's just random values (384 values for each token) and when we train the model on collection of sentences the model itself will adjust and give meaningful values to each token based on how words are used together. and position embedding is needed because Transformers look at all words in a sentence at the exact same time in parallel, so they don't naturally know what word comes first or last. so when we give sentences for training it also checks what is the position of the token (position 0, position 1, position 2...) and according to that it learns the position embeddings. and finally we simply add the token meaning numbers and position numbers together so each token knows what it is and where it is in the sentence.
+ 
+#### How it works:
+1. **Raw Token Embedding Table (`self.wte`):**
+   A raw 2D spreadsheet matrix of 50,257 rows and 384 columns. When token IDs come in (for example `[20037, 4124, 9246]`), it slices the matrix directly by rows (`self.wte[idx]`) to pull out the 384 numbers for each token.
+2. **Raw Position Embedding Table (`self.wpe`):**
+   A raw 2D matrix of 256 rows and 384 columns. It generates position numbers (`[0, 1, 2...]`) for the sentence and slices the matrix (`self.wpe[positions]`) to pull out the 384 numbers for each position slot. Because without this the model will not be able to know the difference between "Cat fired the missile" and "Missile fired the cat" because both sentences have same tokens but in different order and without position embedding the model will not be able to know the difference between them.  
+3. **Combining them (`tok_emb + pos_emb`):**
+   Simply adds the token meaning vector and position vector element-by-element so the output tensor has shape `[Batch_Size, Sequence_Length, 384]`.
+4. **Manual Dropout:**
+   During training, it randomly turns 10% of the numbers into zero so the model doesn't over-rely on any single number. this is used to prevent overfitting.
