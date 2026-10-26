@@ -88,3 +88,22 @@ So embedding is basically simply creating a higher dimensional tensor and assign
    Simply adds the token meaning vector and position vector element-by-element so the output tensor has shape `[Batch_Size, Sequence_Length, 384]`.
 4. **Manual Dropout:**
    During training, it randomly turns 10% of the numbers into zero so the model doesn't over-rely on any single number. this is used to prevent overfitting.
+
+---
+
+### 3. Layer Normalization (Pre-LN)
+
+#### What it does:
+In simple words, Layer Normalization acts like a volume equalizer or stabilizer for numbers. When tokens (each having 384 numbers) pass through multiple layers of matrix additions and multiplications, numbers can easily become too wild, either exploding into huge numbers (thousands) or shrinking down into tiny decimals near zero. If numbers explode, training crashes instantly with `NaN` (Not a Number) loss. If they shrink too much, gradients vanish and the model stops learning completely. Layer Normalization prevents this: for each individual token, it calculates the average (mean) and spread (variance), and rescales those 384 numbers so their average becomes 0 and their spread becomes 1. This keeps the numbers in a healthy, stable range across all 6 Transformer blocks without blowing up.
+
+#### How it works:
+1. **The Math Equation:**
+   It directly implements the formula: `y = gamma * ((x - mean) / sqrt(var + eps)) + beta`
+   - `mean`: The average of the 384 numbers for that token.
+   - `var`: The variance (how widely the numbers are spread out from the average).
+   - `eps` (`1e-5`): A tiny safety number added to the bottom so we never accidentally divide by zero.
+2. **Standardization `(x - mean) / sqrt(...)`:**
+   Subtracting the mean centers all numbers around 0. Dividing by the standard deviation squashes their spread to 1.
+3. **Learnable Scale & Shift (`gamma` and `beta`):**
+   Initially, `gamma` starts at 1.0 and `beta` starts at 0.0. In the beginning, LayerNorm does pure standardization. But as training goes on, the model learns the optimal values for `gamma` and `beta`, allowing it to stretch or shift values if it discovers that some features need to be stronger or quieter.
+
