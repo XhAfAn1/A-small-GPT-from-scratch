@@ -107,3 +107,28 @@ In simple words, Layer Normalization acts like a volume equalizer or stabilizer 
 3. **Learnable Scale & Shift (`gamma` and `beta`):**
    Initially, `gamma` starts at 1.0 and `beta` starts at 0.0. In the beginning, LayerNorm does pure standardization. But as training goes on, the model learns the optimal values for `gamma` and `beta`, allowing it to stretch or shift values if it discovers that some features need to be stronger or quieter.
 
+---
+
+### 4. Causal Multi-Head Self-Attention
+
+#### What it does:
+Until now, our tokens have embeddings (meaning and position) and are stabilized by LayerNorm, but they are completely deaf and blind to each other. For example, if the word is "bank", it has no way of knowing whether the sentence is about a money bank or a river bank. Or in a sentence like "The dog saw the ball and chased it", the word "it" has no idea that it refers to the "ball". Self-Attention is the communication bridge where words can look at each other, share information, and update their representations based on context. And it is called "Causal" because GPT generates text one word at a time from left to right, so words are only allowed to look back at past words and looking into future words is strictly blocked so the model cannot cheat.
+
+#### How it works:
+1. **Query, Key, and Value (Q, K, V):**
+   Each token uses its 384 numbers to create three new vectors using learnable linear projection matrices:
+   - **Query (Q):** What the word is looking for (for example, the word "it" asks: *"What object was mentioned earlier?"*).
+   - **Key (K):** What the word offers (the word "ball" says: *"I am a round physical toy"*).
+   - **Value (V):** The actual information and meaning the word shares if there is a match.
+2. **Matching (Dot Product):**
+   We do a dot product between each token's Query and every past token's Key (`q @ k.transpose(-2, -1)`). If two words are strongly related, their dot product produces a high positive score. We divide this score by `sqrt(64) = 8` to keep the scores from exploding, which prevents the Softmax function from saturating and freezing gradients.
+3. **Causal Mask:**
+   We apply a lower-triangular mask where all future positions are set to `-inf` (negative infinity).
+4. **Softmax (Attention Percentages):**
+   Softmax converts the raw scores into clean percentages that add up to 1.0 (100%) for each word. The `-inf` values automatically become `0.00%`, completely hiding all future words.
+5. **Blending Values:**
+   We multiply the attention percentages by each word's Value vector (`weights @ v`). If the word "it" gives 85% of its attention to "ball", it absorbs 85% of the information about "ball". Now "it" understands what object it represents.
+6. **Why Multi-Head (6 Heads):**
+   Instead of doing this conversation once across all 384 numbers, we split the 384 numbers into 6 parallel heads of 64 numbers each (384 / 6 = 64). This lets the model focus on multiple relationships at the exact same time (for example, Head 1 tracks who did the action, Head 2 tracks pronouns, Head 3 tracks adjectives). At the end, we glue the 6 heads back together into one 384-dimensional vector and pass it through a final output linear projection (`self.out_proj`).
+
+
