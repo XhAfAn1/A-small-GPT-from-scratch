@@ -7,5 +7,6 @@ class GPTConfig:
     n_layer: int = 6          # Number of Transformer blocks 
     n_head: int = 6           # Number of parallel Attention heads
     d_model: int = 384        # Embedding dimension 
+    mlp_ratio: int = 4        # Expansion factor for Feed-Forward network (384 -> 1536 -> 384)
     dropout: float = 0.1      # Dropout probability for regularization
     bias: bool = True         # Whether to include additive bias in Linear and LayerNorm

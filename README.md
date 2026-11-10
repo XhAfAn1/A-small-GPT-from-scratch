@@ -131,4 +131,20 @@ Until now, our tokens have embeddings (meaning and position) and are stabilized 
 6. **Why Multi-Head (6 Heads):**
    Instead of doing this conversation once across all 384 numbers, we split the 384 numbers into 6 parallel heads of 64 numbers each (384 / 6 = 64). This lets the model focus on multiple relationships at the exact same time (for example, Head 1 tracks who did the action, Head 2 tracks pronouns, Head 3 tracks adjectives). At the end, we glue the 6 heads back together into one 384-dimensional vector and pass it through a final output linear projection (`self.out_proj`).
 
+---
+
+### 5. Feed-Forward Network (MLP)
+
+#### What it does:
+If Attention is the group meeting where words talk to each other, the Feed-Forward Network (MLP) is where each word goes back to its own desk and thinks alone. Inside the MLP, words never look at other words. It processes every token independently, acting like a memory bank where the model stores facts and patterns. Actually, most of the Transformer block's parameters (~7.09M out of ~10.65M) live inside the MLP layers.
+
+#### How it works:
+1. **Expand 4x (`384 -> 1536`):**
+   384 numbers is a tight space to compute complex logic. The first linear layer stretches each token 4x wider to 1,536 numbers (`mlp_ratio = 4`), giving the model a big workbench of 1,536 concept neurons so patterns don't collide.
+2. **Raw GELU Activation:**
+   Two linear layers in a row without an activation function just collapse into one flat linear layer. So we pass the 1,536 numbers through **GELU** (a smooth upgrade over ReLU). Unlike ReLU which hits a hard zero for negative numbers and can cause dead neurons, GELU curves smoothly around zero so gradients stay alive.
+3. **Compress Back (`1536 -> 384`) & Dropout:**
+   The second linear layer packs the 1,536 neuron outputs back down to 384 dimensions so it fits right back onto our main residual highway, followed by 10% dropout during training.
+
+
 
